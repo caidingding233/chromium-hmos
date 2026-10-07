@@ -106,10 +106,17 @@ jobs:
           HARMONYOS_SDK_URL: ${{ secrets.HARMONYOS_SDK_URL }}
           HARMONYOS_SDK_SHA256: ${{ vars.HARMONYOS_SDK_SHA256 }}
         run: scripts/download-harmonyos-sdk.sh
+      - name: Download and verify official Command Line Tools
+        env:
+          HARMONYOS_CLT_URL: ${{ secrets.HARMONYOS_CLT_URL }}
+          HARMONYOS_CLT_SHA256: ${{ vars.HARMONYOS_CLT_SHA256 }}
+        run: scripts/download-harmonyos-cli.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: harmonyos-sdk-${{ github.run_id }}
-          path: harmonyos-sdk/
+          name: harmonyos-build-tools-${{ github.run_id }}
+          path: |
+            harmonyos-sdk/
+            harmonyos-cli/
           compression-level: 0
           retention-days: 1
 
@@ -133,8 +140,8 @@ jobs:
           echo "${RUNNER_TEMP}/depot_tools" >> "${GITHUB_PATH}"
       - uses: actions/download-artifact@v4
         with:
-          name: harmonyos-sdk-${{ github.run_id }}
-          path: harmonyos-sdk
+          name: harmonyos-build-tools-${{ github.run_id }}
+          path: .
       - name: Prepare optional signing config
         env:
           HARMONYOS_SIGNING_CONFIG_B64: ${{ secrets.HARMONYOS_SIGNING_CONFIG_B64 }}
@@ -148,9 +155,11 @@ jobs:
           NINJA_JOBS: 2
         run: |
           sdk_root="$(cat harmonyos-sdk/sdk_root.relative)"
-          devecocli="$(cat harmonyos-sdk/devecocli.relative)"
+          hvigor="$(cat harmonyos-cli/hvigor.relative)"
+          ohpm="$(cat harmonyos-cli/ohpm.relative)"
           export HARMONYOS_SDK_ROOT="${GITHUB_WORKSPACE}/${sdk_root}"
-          export HARMONYOS_DEVECOLI="${GITHUB_WORKSPACE}/${devecocli}"
+          export HARMONYOS_HVIGOR="${GITHUB_WORKSPACE}/${hvigor}"
+          export HARMONYOS_OHPM="${GITHUB_WORKSPACE}/${ohpm}"
           scripts/self-hosted-build-hap.sh \
             "${{ needs.compatibility.outputs.version }}" \
             "${{ needs.compatibility.outputs.revision }}"
