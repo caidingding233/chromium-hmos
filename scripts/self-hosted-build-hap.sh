@@ -55,7 +55,8 @@ cp "${project_root}/config/args.plan_kirin_pc.gn" \
   export OHOS_BASE_SDK_HOME="${HARMONYOS_SDK_ROOT}"
   export DEVECO_SDK_HOME="${HARMONYOS_SDK_ROOT}"
   "${ohpm_cmd}" --strict_ssl false install
-  "${hvigor_cmd}" --mode=module clean -p debuggable=false assembleHap --no-daemon
+  "${hvigor_cmd}" --mode=module clean -p debuggable=false \
+    -p product=default -p buildMode=release assembleHap --no-daemon
 )
 
 built_hap="$(find "${chromium_src}/chromium-ui/entry/build/default" \

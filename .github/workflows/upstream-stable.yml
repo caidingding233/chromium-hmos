@@ -157,9 +157,21 @@ jobs:
         env:
           NINJA_JOBS: 2
         run: |
-          sdk_root="$(cat harmonyos-sdk/sdk_root.relative)"
+          # Artifact extraction may normalize executable bits. Restore the
+          # compiler/tool and command-line-tools entry points before use.
+          find harmonyos-sdk -type f \
+            \( -path '*/native/llvm/bin/*' -o -path '*/native/build-tools/*' -o -path '*/toolchains/*' \) \
+            -exec chmod +x {} +
           hvigor="$(cat harmonyos-cli/hvigor.relative)"
           ohpm="$(cat harmonyos-cli/ohpm.relative)"
+          chmod +x "${hvigor}" "${ohpm}"
+          if [[ -f harmonyos-cli/clt_root.relative ]]; then
+            clt_root_rel="$(cat harmonyos-cli/clt_root.relative)"
+            if [[ -f "${clt_root_rel}/tool/node/bin/node" ]]; then
+              chmod +x "${clt_root_rel}/tool/node/bin/node"
+            fi
+          fi
+          sdk_root="$(cat harmonyos-sdk/sdk_root.relative)"
           export HARMONYOS_SDK_ROOT="${GITHUB_WORKSPACE}/${sdk_root}"
           export HARMONYOS_HVIGOR="${GITHUB_WORKSPACE}/${hvigor}"
           export HARMONYOS_OHPM="${GITHUB_WORKSPACE}/${ohpm}"
