@@ -13,10 +13,14 @@ command -v fetch >/dev/null || {
   echo 'depot_tools fetch is required on the self-hosted runner.' >&2
   exit 1
 }
-command -v devecocli >/dev/null || {
-  echo 'devecocli is required on the self-hosted runner.' >&2
+devecocli_cmd="${HARMONYOS_DEVECOLI:-}"
+if [[ -z "${devecocli_cmd}" ]]; then
+  devecocli_cmd="$(command -v devecocli || true)"
+fi
+if [[ -z "${devecocli_cmd}" || ! -x "${devecocli_cmd}" ]]; then
+  echo 'devecocli is required; set HARMONYOS_DEVECOLI or install it on the runner.' >&2
   exit 1
-}
+fi
 : "${HARMONYOS_SDK_ROOT:?HARMONYOS_SDK_ROOT must point to a licensed local SDK}"
 
 mkdir -p "${work_root}" "${artifact_dir}"
@@ -40,7 +44,7 @@ cp "${project_root}/config/args.plan_kirin_pc.gn" \
 
 (
   cd "${chromium_src}/chromium-ui"
-  devecocli build --product default --modules entry@default --build-mode release
+  "${devecocli_cmd}" build --product default --modules entry@default --build-mode release
 )
 
 built_hap="$(find "${chromium_src}/chromium-ui/entry/build/default" \

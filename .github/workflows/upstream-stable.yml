@@ -5,6 +5,22 @@ on:
   schedule:
     - cron: '17 */6 * * *'
   workflow_dispatch:
+    inputs:
+      adapter_ref:
+        description: 'Adapter branch or ref to build'
+        required: false
+        default: 'hmos-150-adapter'
+        type: string
+      publish_release:
+        description: 'Publish the verified HAP as a GitHub Release asset'
+        required: false
+        default: false
+        type: boolean
+      release_tag:
+        description: 'Release tag (leave empty for an automatic run tag)'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -21,7 +37,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: hmos-150-adapter
+          ref: ${{ inputs.adapter_ref || github.ref_name }}
       - id: upstream
         name: Resolve official stable release
         run: scripts/resolve-latest-stable.sh
@@ -49,7 +65,7 @@ jobs:
               `Current HarmonyOS patch applies cleanly: ${compatible}.`,
               '',
               compatible === 'true'
-                ? 'The licensed self-hosted HAP build may run when it is enabled.'
+                ? 'The licensed HarmonyOS HAP build may run when enabled.'
                 : 'The patch needs a compatibility refresh before a native build can be trusted.'
             ].join('\n');
             const issues = await github.rest.issues.listForRepo({
@@ -75,7 +91,93 @@ jobs:
               });
             }
 
-  build-hap:
+  prepare-harmonyos-sdk:
+    needs: compatibility
+    if: >-
+      needs.compatibility.outputs.compatible == 'true' &&
+      vars.ENABLE_HARMONYOS_GITHUB_HOSTED_BUILD == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.adapter_ref || github.ref_name }}
+      - name: Download and verify official HarmonyOS SDK
+        env:
+          HARMONYOS_SDK_URL: ${{ secrets.HARMONYOS_SDK_URL }}
+          HARMONYOS_SDK_SHA256: ${{ vars.HARMONYOS_SDK_SHA256 }}
+        run: scripts/download-harmonyos-sdk.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: harmonyos-sdk-${{ github.run_id }}
+          path: harmonyos-sdk/
+          compression-level: 0
+          retention-days: 1
+
+  build-hap-github:
+    needs: [compatibility, prepare-harmonyos-sdk]
+    permissions:
+      contents: write
+    if: >-
+      needs.compatibility.outputs.compatible == 'true' &&
+      vars.ENABLE_HARMONYOS_GITHUB_HOSTED_BUILD == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.adapter_ref || github.ref_name }}
+      - name: Install build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rsync unzip
+          git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git "${RUNNER_TEMP}/depot_tools"
+          echo "${RUNNER_TEMP}/depot_tools" >> "${GITHUB_PATH}"
+      - uses: actions/download-artifact@v4
+        with:
+          name: harmonyos-sdk-${{ github.run_id }}
+          path: harmonyos-sdk
+      - name: Prepare optional signing config
+        env:
+          HARMONYOS_SIGNING_CONFIG_B64: ${{ secrets.HARMONYOS_SIGNING_CONFIG_B64 }}
+        run: |
+          if [[ -n "${HARMONYOS_SIGNING_CONFIG_B64}" ]]; then
+            printf '%s' "${HARMONYOS_SIGNING_CONFIG_B64}" | base64 --decode > "${RUNNER_TEMP}/build-profile.json5"
+            echo "HARMONYOS_SIGNING_CONFIG_PATH=${RUNNER_TEMP}/build-profile.json5" >> "${GITHUB_ENV}"
+          fi
+      - name: Build native runtime and HAP on GitHub-hosted runner
+        env:
+          NINJA_JOBS: 2
+        run: |
+          sdk_root="$(cat harmonyos-sdk/sdk_root.relative)"
+          devecocli="$(cat harmonyos-sdk/devecocli.relative)"
+          export HARMONYOS_SDK_ROOT="${GITHUB_WORKSPACE}/${sdk_root}"
+          export HARMONYOS_DEVECOLI="${GITHUB_WORKSPACE}/${devecocli}"
+          scripts/self-hosted-build-hap.sh \
+            "${{ needs.compatibility.outputs.version }}" \
+            "${{ needs.compatibility.outputs.revision }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chromium-hmos-${{ needs.compatibility.outputs.version }}
+          path: artifacts/*.hap
+          retention-days: 7
+      - name: Publish HAP to GitHub Release
+        if: ${{ inputs.publish_release == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.compatibility.outputs.version }}
+          REVISION: ${{ needs.compatibility.outputs.revision }}
+          REQUESTED_TAG: ${{ inputs.release_tag }}
+        run: |
+          tag="${REQUESTED_TAG}"
+          if [[ -z "${tag}" ]]; then
+            tag="chromium-hmos-${VERSION}-${GITHUB_RUN_NUMBER}"
+          fi
+          gh release create "${tag}" artifacts/*.hap \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${GITHUB_SHA}" \
+            --title "Chromium HarmonyOS ${VERSION}" \
+            --notes "Chromium ${VERSION} (${REVISION}) HarmonyOS HAP build from the verified adapter workflow."
+
+  build-hap-self-hosted:
     needs: compatibility
     if: >-
       needs.compatibility.outputs.compatible == 'true' &&
@@ -84,7 +186,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: hmos-150-adapter
+          ref: ${{ inputs.adapter_ref || github.ref_name }}
       - name: Build native runtime and HAP
         env:
           HARMONYOS_SDK_ROOT: ${{ vars.HARMONYOS_SDK_ROOT }}
@@ -96,6 +198,6 @@ jobs:
           "${{ needs.compatibility.outputs.revision }}"
       - uses: actions/upload-artifact@v4
         with:
-          name: chromium-hmos-${{ needs.compatibility.outputs.version }}
+          name: chromium-hmos-self-hosted-${{ needs.compatibility.outputs.version }}
           path: artifacts/*.hap
           retention-days: 7
