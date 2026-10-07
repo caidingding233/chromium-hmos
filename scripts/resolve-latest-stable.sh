@@ -4,7 +4,7 @@ set -euo pipefail
 
 readonly release_url='https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Linux&num=1'
 readonly chromium_remote='https://github.com/chromium/chromium.git'
-readonly baseline_version='150.0.7871.114'
+readonly baseline_version='155.0.8059.39'
 
 release_json="$(curl --fail --location --silent --show-error "${release_url}")"
 stable_version="$(python3 -c \

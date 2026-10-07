@@ -24,8 +24,8 @@ jobs:
           REQUIRE_COMPATIBLE: '1'
         run: >-
           scripts/check-upstream-adapter.sh
-          150.0.7871.114
-          f405107495a07cb1bfcf687d4af8d91117098db6
+          155.0.8059.39
+          3ff7ac5a9224be9156d7f8703a06e22890aafd34
       - name: Upload compatibility report
         if: always()
         uses: actions/upload-artifact@v4
