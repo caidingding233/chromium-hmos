@@ -143,4 +143,3 @@ printf '%s\n' "${sdk_root#"${workspace_root}/"}" > "${out_root}/sdk_root.relativ
 printf '%s\n' "${native_root#"${workspace_root}/"}" > "${out_root}/sdk_native.relative"
 printf 'Verified OpenHarmony SDK archive at %s (native: %s, API: %s)\n' \
   "${sdk_root}" "${native_root}" "${api_values[0]}"
-
