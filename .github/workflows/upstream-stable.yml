@@ -187,6 +187,9 @@ jobs:
           if [[ -f harmonyos-cli/clt_root.relative ]]; then
             clt_root="${GITHUB_WORKSPACE}/$(cat harmonyos-cli/clt_root.relative)"
             export PATH="${clt_root}/bin:${PATH}"
+            if [[ -d "${clt_root}/sdk/default/openharmony" ]]; then
+              export HARMONYOS_HAP_SDK_ROOT="${clt_root}/sdk/default/openharmony"
+            fi
             if [[ -x "${clt_root}/tool/node/bin/node" ]]; then
               export NODE_HOME="${clt_root}/tool/node"
               export PATH="${NODE_HOME}/bin:${PATH}"

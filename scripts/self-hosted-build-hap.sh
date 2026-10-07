@@ -30,6 +30,7 @@ if [[ -z "${ohpm_cmd}" || ! -x "${ohpm_cmd}" ]]; then
   exit 1
 fi
 : "${HARMONYOS_SDK_ROOT:?HARMONYOS_SDK_ROOT must point to a licensed local SDK}"
+hap_sdk_root="${HARMONYOS_HAP_SDK_ROOT:-${HARMONYOS_SDK_ROOT}}"
 
 mkdir -p "${work_root}" "${artifact_dir}"
 cd "${work_root}"
@@ -52,8 +53,8 @@ cp "${project_root}/config/args.plan_kirin_pc.gn" \
 
 (
   cd "${chromium_src}/chromium-ui"
-  export OHOS_BASE_SDK_HOME="${HARMONYOS_SDK_ROOT}"
-  export DEVECO_SDK_HOME="${HARMONYOS_SDK_ROOT}"
+  export OHOS_BASE_SDK_HOME="${hap_sdk_root}"
+  export DEVECO_SDK_HOME="${hap_sdk_root}"
   "${ohpm_cmd}" --strict_ssl false install
   "${hvigor_cmd}" --mode=module clean -p debuggable=false \
     -p product=default -p buildMode=release assembleHap --no-daemon
