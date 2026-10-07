@@ -52,6 +52,8 @@ cp "${project_root}/config/args.plan_kirin_pc.gn" \
 
 (
   cd "${chromium_src}/chromium-ui"
+  export OHOS_BASE_SDK_HOME="${HARMONYOS_SDK_ROOT}"
+  export DEVECO_SDK_HOME="${HARMONYOS_SDK_ROOT}"
   "${ohpm_cmd}" --strict_ssl false install
   "${hvigor_cmd}" --mode=module clean -p debuggable=false assembleHap --no-daemon
 )
@@ -63,7 +65,7 @@ if [[ -z "${built_hap}" ]]; then
     -type f -name '*-unsigned.hap' | LC_ALL=C sort | tail -n 1)"
 fi
 [[ -n "${built_hap}" ]] || {
-  echo 'devecocli did not produce a Chromium HarmonyOS Adapter HAP.' >&2
+  echo 'Hvigor did not produce a Chromium HarmonyOS Adapter HAP.' >&2
   exit 1
 }
 
