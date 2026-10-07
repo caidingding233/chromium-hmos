@@ -114,12 +114,17 @@ jobs:
           HARMONYOS_CLT_URL: ${{ secrets.HARMONYOS_CLT_URL }}
           HARMONYOS_CLT_SHA256: ${{ vars.HARMONYOS_CLT_SHA256 }}
         run: scripts/download-harmonyos-cli.sh
+      - name: Pack verified tool trees
+        run: |
+          # Preserve executable bits and symlinks across upload/download-artifact.
+          tar -cf harmonyos-sdk.tar -C harmonyos-sdk .
+          tar -cf harmonyos-cli.tar -C harmonyos-cli .
       - uses: actions/upload-artifact@v4
         with:
           name: harmonyos-build-tools-${{ github.run_id }}
           path: |
-            harmonyos-sdk/
-            harmonyos-cli/
+            harmonyos-sdk.tar
+            harmonyos-cli.tar
           compression-level: 0
           retention-days: 1
 
@@ -145,6 +150,10 @@ jobs:
         with:
           name: harmonyos-build-tools-${{ github.run_id }}
           path: .
+      - name: Unpack verified tool trees
+        run: |
+          tar -xf harmonyos-sdk.tar
+          tar -xf harmonyos-cli.tar
       - name: Prepare optional signing config
         env:
           HARMONYOS_SIGNING_CONFIG_B64: ${{ secrets.HARMONYOS_SIGNING_CONFIG_B64 }}
