@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-: "${HARMONYOS_SDK_URL:?HARMONYOS_SDK_URL must point to the official HarmonyOS SDK archive}"
-: "${HARMONYOS_SDK_SHA256:?HARMONYOS_SDK_SHA256 must pin the SDK archive digest}"
+sdk_url="${HARMONYOS_SDK_URL:-https://cidownload.openharmony.cn/version/Master_Version/OpenHarmony_6.0.0.49SP4/20260930_043230/version-Master_Version-OpenHarmony_6.0.0.49SP4-20260930_043230-ohos-sdk-full_6.0-Release.tar.gz}"
+sdk_sha256="${HARMONYOS_SDK_SHA256:-235c4b2e9aca00405042cf636ade9d597ea352dcf97cbc5f613fc1f07fd565e2}"
 
 readonly project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly workspace_root="${GITHUB_WORKSPACE:-$PWD}"
@@ -12,8 +12,8 @@ readonly archive="${RUNNER_TEMP:-/tmp}/harmonyos-sdk.archive"
 rm -rf "${out_root}"
 mkdir -p "${out_root}/root"
 
-curl --fail --location --retry 3 --retry-delay 2 --output "${archive}" "${HARMONYOS_SDK_URL}"
-echo "${HARMONYOS_SDK_SHA256}  ${archive}" | sha256sum --check --strict
+curl --fail --location --retry 3 --retry-delay 2 --output "${archive}" "${sdk_url}"
+echo "${sdk_sha256}  ${archive}" | sha256sum --check --strict
 
 # The CI package is normally a tarball containing a host directory with one
 # zip per SDK component. Some mirrors expose a zip (or a signed URL without
