@@ -13,11 +13,24 @@ command -v fetch >/dev/null || {
   echo 'depot_tools fetch is required on the self-hosted runner.' >&2
   exit 1
 }
-command -v devecocli >/dev/null || {
-  echo 'devecocli is required on the self-hosted runner.' >&2
+hvigor_cmd="${HARMONYOS_HVIGOR:-}"
+if [[ -z "${hvigor_cmd}" ]]; then
+  hvigor_cmd="$(command -v hvigorw || true)"
+fi
+ohpm_cmd="${HARMONYOS_OHPM:-}"
+if [[ -z "${ohpm_cmd}" ]]; then
+  ohpm_cmd="$(command -v ohpm || true)"
+fi
+if [[ -z "${hvigor_cmd}" || ! -x "${hvigor_cmd}" ]]; then
+  echo 'Hvigor is required; set HARMONYOS_HVIGOR to command-line-tools/bin/hvigorw.' >&2
   exit 1
-}
+fi
+if [[ -z "${ohpm_cmd}" || ! -x "${ohpm_cmd}" ]]; then
+  echo 'ohpm is required; set HARMONYOS_OHPM to command-line-tools/bin/ohpm.' >&2
+  exit 1
+fi
 : "${HARMONYOS_SDK_ROOT:?HARMONYOS_SDK_ROOT must point to a licensed local SDK}"
+hap_sdk_root="${HARMONYOS_HAP_SDK_ROOT:-${HARMONYOS_SDK_ROOT}}"
 
 mkdir -p "${work_root}" "${artifact_dir}"
 cd "${work_root}"
@@ -40,7 +53,11 @@ cp "${project_root}/config/args.plan_kirin_pc.gn" \
 
 (
   cd "${chromium_src}/chromium-ui"
-  devecocli build --product default --modules entry@default --build-mode release
+  export OHOS_BASE_SDK_HOME="${hap_sdk_root}"
+  export DEVECO_SDK_HOME="${hap_sdk_root}"
+  "${ohpm_cmd}" --strict_ssl false install
+  "${hvigor_cmd}" --mode=module clean -p debuggable=false \
+    -p product=default -p buildMode=release assembleHap --no-daemon
 )
 
 built_hap="$(find "${chromium_src}/chromium-ui/entry/build/default" \
@@ -50,7 +67,7 @@ if [[ -z "${built_hap}" ]]; then
     -type f -name '*-unsigned.hap' | LC_ALL=C sort | tail -n 1)"
 fi
 [[ -n "${built_hap}" ]] || {
-  echo 'devecocli did not produce a Chromium HarmonyOS Adapter HAP.' >&2
+  echo 'Hvigor did not produce a Chromium HarmonyOS Adapter HAP.' >&2
   exit 1
 }
 

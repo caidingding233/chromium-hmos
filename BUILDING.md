@@ -8,7 +8,13 @@
 - DevEco Studio/Hvigor for the ArkUI HAP shell.
 
 The SDK and signing files are intentionally not redistributed by this project.
-Place or link the unpacked SDK at `src/ohos_sdk` after applying the adapter.
+For an OpenHarmony CI full/public archive, unpack the outer tarball and the
+Linux component ZIPs, then place or link the resulting `linux` directory at
+`src/ohos_sdk` after applying the adapter. It must contain `native/{llvm,sysroot}`
+and the matching `ets`, `js`, `previewer`, and `toolchains` components.
+The `ohos_build` entry point comes from this adapter's overlay. Hvigor and
+ohpm come from the separately installed command-line-tools package; set
+`HARMONYOS_HVIGOR` and `HARMONYOS_OHPM` when invoking the CI build script.
 The adapter also expects the WebView interface tree at
 `../deps_code/webview`; `scripts/apply-adapter.sh` installs the published copy.
 
@@ -45,7 +51,7 @@ distributors remain responsible for the licenses required in their markets.
 The ArkUI project is under `chromium-ui`. Configure signing locally in DevEco
 Studio. Do not commit generated signing blocks or `.cer`, `.p12`, or `.p7b`
 files. The native build must be staged into the ArkUI project before running
-`devecocli build --product default --build-mode release`.
+`hvigorw --mode=module clean -p debuggable=false assembleHap --no-daemon` (with `ohpm install` first).
 
 This publication is a source snapshot, not a promise that every third-party
 machine has the same private SDK build used for the original test package.

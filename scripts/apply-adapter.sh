@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-readonly expected_revision="f405107495a07cb1bfcf687d4af8d91117098db6"
+readonly expected_revision="3ff7ac5a9224be9156d7f8703a06e22890aafd34"
 readonly project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly chromium_src="${1:-}"
 
