@@ -14,6 +14,10 @@ if [[ -z "${clt_url}" ]]; then
   if [[ -z "${clt_sha256}" && "${digest}" == sha256:* ]]; then
     clt_sha256="${digest#sha256:}"
   fi
+  # Huawei's archive index publishes this checksum for the mirrored 2.0.0.2 asset.
+  if [[ -z "${clt_sha256}" && "${asset_name}" == commandline-tools-linux-2.0.0.2.zip ]]; then
+    clt_sha256=897efe0e4df015e44869f9322026fbd80c365a1d67387031168ab53c6eb6d0d4
+  fi
 fi
 : "${clt_sha256:?HARMONYOS_CLT_SHA256 is required when the release asset has no digest}"
 
