@@ -116,8 +116,8 @@ jobs:
       - name: Pack verified tool trees
         run: |
           # Preserve executable bits and symlinks across upload/download-artifact.
-          tar -cf harmonyos-sdk.tar -C harmonyos-sdk .
-          tar -cf harmonyos-cli.tar -C harmonyos-cli .
+          tar -cf harmonyos-sdk.tar harmonyos-sdk
+          tar -cf harmonyos-cli.tar harmonyos-cli
       - uses: actions/upload-artifact@v4
         with:
           name: harmonyos-build-tools-${{ github.run_id }}
