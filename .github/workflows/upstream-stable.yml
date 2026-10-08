@@ -101,7 +101,7 @@ jobs:
         with:
           ref: ${{ inputs.adapter_ref || github.ref_name }}
       - name: Install SDK extraction tools
-        run: sudo apt-get update && sudo apt-get install -y unzip
+        run: sudo apt-get update && sudo apt-get install -y unzip jq
       - name: Download and verify official OpenHarmony SDK
         env:
           HARMONYOS_SDK_URL: ${{ secrets.HARMONYOS_SDK_URL }}
