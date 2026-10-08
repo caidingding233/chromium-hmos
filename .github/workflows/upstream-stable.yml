@@ -93,9 +93,7 @@ jobs:
 
   prepare-harmonyos-sdk:
     needs: compatibility
-    if: >-
-      needs.compatibility.outputs.compatible == 'true' &&
-      vars.ENABLE_HARMONYOS_GITHUB_HOSTED_BUILD == 'true'
+    if: needs.compatibility.outputs.compatible == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -130,11 +128,13 @@ jobs:
 
   build-hap-github:
     needs: [compatibility, prepare-harmonyos-sdk]
+    strategy:
+      fail-fast: false
+      matrix:
+        build_id: [1, 2, 3]
     permissions:
       contents: write
-    if: >-
-      needs.compatibility.outputs.compatible == 'true' &&
-      vars.ENABLE_HARMONYOS_GITHUB_HOSTED_BUILD == 'true'
+    if: needs.compatibility.outputs.compatible == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -198,13 +198,36 @@ jobs:
           scripts/self-hosted-build-hap.sh \
             "${{ needs.compatibility.outputs.version }}" \
             "${{ needs.compatibility.outputs.revision }}"
+      - name: Tag this matrix build's HAP
+        run: |
+          hap="artifacts/Chromium-HarmonyOS-${{ needs.compatibility.outputs.version }}.hap"
+          test -f "${hap}"
+          mv "${hap}" "artifacts/Chromium-HarmonyOS-${{ needs.compatibility.outputs.version }}-build-${{ matrix.build_id }}.hap"
       - uses: actions/upload-artifact@v4
         with:
-          name: chromium-hmos-${{ needs.compatibility.outputs.version }}
+          name: chromium-hmos-${{ needs.compatibility.outputs.version }}-build-${{ matrix.build_id }}
           path: artifacts/*.hap
           retention-days: 7
-      - name: Publish HAP to GitHub Release
-        if: ${{ inputs.publish_release == true }}
+
+  publish-hap-release:
+    needs: [compatibility, build-hap-github]
+    permissions:
+      contents: write
+    if: >-
+      inputs.publish_release == true &&
+      needs.compatibility.outputs.compatible == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: chromium-hmos-${{ needs.compatibility.outputs.version }}-build-*
+          path: artifacts
+          merge-multiple: true
+      - name: Verify three HAP artifacts
+        run: |
+          count="$(find artifacts -maxdepth 1 -type f -name '*.hap' | wc -l)"
+          test "${count}" -eq 3
+      - name: Publish HAPs to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.compatibility.outputs.version }}
