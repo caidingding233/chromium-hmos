@@ -1,6 +1,7 @@
 name: Track Chromium Stable
 
 on:
+  push:
   workflow_call:
   schedule:
     - cron: '17 */6 * * *'
@@ -128,10 +129,6 @@ jobs:
 
   build-hap-github:
     needs: [compatibility, prepare-harmonyos-sdk]
-    strategy:
-      fail-fast: false
-      matrix:
-        build_id: [1, 2, 3]
     permissions:
       contents: write
     if: needs.compatibility.outputs.compatible == 'true'
@@ -198,14 +195,9 @@ jobs:
           scripts/self-hosted-build-hap.sh \
             "${{ needs.compatibility.outputs.version }}" \
             "${{ needs.compatibility.outputs.revision }}"
-      - name: Tag this matrix build's HAP
-        run: |
-          hap="artifacts/Chromium-HarmonyOS-${{ needs.compatibility.outputs.version }}.hap"
-          test -f "${hap}"
-          mv "${hap}" "artifacts/Chromium-HarmonyOS-${{ needs.compatibility.outputs.version }}-build-${{ matrix.build_id }}.hap"
       - uses: actions/upload-artifact@v4
         with:
-          name: chromium-hmos-${{ needs.compatibility.outputs.version }}-build-${{ matrix.build_id }}
+          name: chromium-hmos-${{ needs.compatibility.outputs.version }}
           path: artifacts/*.hap
           retention-days: 7
 
@@ -214,19 +206,18 @@ jobs:
     permissions:
       contents: write
     if: >-
-      inputs.publish_release == true &&
+      (github.event_name == 'push' || inputs.publish_release == true) &&
       needs.compatibility.outputs.compatible == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: chromium-hmos-${{ needs.compatibility.outputs.version }}-build-*
+          name: chromium-hmos-${{ needs.compatibility.outputs.version }}
           path: artifacts
-          merge-multiple: true
-      - name: Verify three HAP artifacts
+      - name: Verify one HAP artifact
         run: |
           count="$(find artifacts -maxdepth 1 -type f -name '*.hap' | wc -l)"
-          test "${count}" -eq 3
+          test "${count}" -eq 1
       - name: Publish HAPs to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
