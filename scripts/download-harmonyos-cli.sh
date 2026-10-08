@@ -2,16 +2,28 @@
 
 set -euo pipefail
 
-: "${HARMONYOS_CLT_URL:?HARMONYOS_CLT_URL must point to the official Linux Command Line Tools archive}"
-: "${HARMONYOS_CLT_SHA256:?HARMONYOS_CLT_SHA256 must pin the Command Line Tools archive digest}"
+asset_name="${HARMONYOS_CLT_ASSET_NAME:-commandline-tools-linux-2.0.0.2.zip}"
+clt_url="${HARMONYOS_CLT_URL:-}"
+clt_sha256="${HARMONYOS_CLT_SHA256:-}"
+if [[ -z "${clt_url}" ]]; then
+  command -v jq >/dev/null || { echo 'jq is required when resolving the public CLI release.' >&2; exit 1; }
+  release_json="$(curl --fail --location --retry 3 --retry-delay 2     -H 'Accept: application/vnd.github+json'     'https://api.github.com/repos/harmonyos-dev/hos-sdk/releases/latest')"
+  clt_url="$(jq -r --arg name "${asset_name}" '.assets[] | select(.name == $name) | .browser_download_url' <<<"${release_json}")"
+  digest="$(jq -r --arg name "${asset_name}" '.assets[] | select(.name == $name) | .digest // empty' <<<"${release_json}")"
+  [[ -n "${clt_url}" && "${clt_url}" != null ]] || { printf 'CLI asset %s was not found in the public release.\n' "${asset_name}" >&2; exit 1; }
+  if [[ -z "${clt_sha256}" && "${digest}" == sha256:* ]]; then
+    clt_sha256="${digest#sha256:}"
+  fi
+fi
+: "${clt_sha256:?HARMONYOS_CLT_SHA256 is required when the release asset has no digest}"
 
 readonly workspace_root="${GITHUB_WORKSPACE:-$PWD}"
 readonly out_root="${workspace_root}/harmonyos-cli"
 readonly archive="${RUNNER_TEMP:-/tmp}/harmonyos-cli.archive"
 rm -rf "${out_root}"
 mkdir -p "${out_root}/root"
-curl --fail --location --retry 3 --retry-delay 2 --output "${archive}" "${HARMONYOS_CLT_URL}"
-echo "${HARMONYOS_CLT_SHA256}  ${archive}" | sha256sum --check --strict
+curl --fail --location --retry 3 --retry-delay 2 --output "${archive}" "${clt_url}"
+echo "${clt_sha256}  ${archive}" | sha256sum --check --strict
 
 if unzip -t "${archive}" >/dev/null 2>&1; then
   unzip -q "${archive}" -d "${out_root}/root"
